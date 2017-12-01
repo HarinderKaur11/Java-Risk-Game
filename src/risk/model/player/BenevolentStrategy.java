@@ -20,6 +20,10 @@ public class BenevolentStrategy implements PlayerStrategy {
 	 */
 	private GameDriver driver = new GameDriver();
 	
+	public BenevolentStrategy(GameDriver nDriver) {
+		driver = nDriver;
+	}
+	
 	/**
 	 * Reinforcement phase of benevolent player that reinforces its weakest countries.
 	 * @see risk.model.player.PlayerStrategy#reinforcementPhase(int, java.lang.String[])
@@ -53,8 +57,9 @@ public class BenevolentStrategy implements PlayerStrategy {
 		/*get the integer round-off of the armies to be alloted to each weak country.*/
 		int armiesToBeReinforced = (int)(player.getArmiesCount()/countOfWeakCountries);
 		for( CountryNode country: weakCountryList){
-			country.addArmy(armiesToBeReinforced);
-			player.removeArmies(armiesToBeReinforced);
+			driver.shiftArmiesOnReinforcement(country.getCountryName(), armiesToBeReinforced);
+//			country.addArmy(armiesToBeReinforced);
+//			player.removeArmies(armiesToBeReinforced);
 		}
 		
 		/*Move the armies remaining into the first weakest country in the list.*/
@@ -64,6 +69,7 @@ public class BenevolentStrategy implements PlayerStrategy {
 			weakCountryList.get(0).addArmy(playerArmiesLeft);
 			player.removeArmies(playerArmiesLeft);
 		}
+		driver.nottifyObservers(driver.getTurnManager().getPhase());
 		driver.changePhase();
 	}
 
@@ -74,6 +80,7 @@ public class BenevolentStrategy implements PlayerStrategy {
 	@Override
 	public void attackPhase(ArrayList<String> countryList) {
 		/*skip attack phase.*/
+		driver.nottifyObservers(driver.getTurnManager().getPhase());
 		driver.changePhase();
 	}
 	
@@ -96,8 +103,8 @@ public class BenevolentStrategy implements PlayerStrategy {
 		CountryNode weakest = countries.get(0);
 		CountryNode strongest = countries.get(countries.size()-1);
 		int average = (int)(weakest.getArmiesCount() + strongest.getArmiesCount()) / 2;
-		weakest.addArmy(average);
-		strongest.removeArmies(average);
+		driver.getArmiesShiftedAfterFortification(strongest.getCountryName(), weakest.getCountryName(), average);
+		driver.nottifyObservers(driver.getTurnManager().getPhase());
 		driver.changePhase();
 	}
 
@@ -124,5 +131,22 @@ public class BenevolentStrategy implements PlayerStrategy {
 		});
 		return countryList;
 	}
+
+	@Override
+	public int selectDiceNumber(int diceToRoll, String pName) {
+		
+		return diceToRoll;
+	}
+
+	@Override
+	public int moveArmies(int aArmies, int maxArmies, String message) {
+		return new Random().nextInt(maxArmies+1-aArmies) + aArmies;
+	}
+	
+	@Override
+	public String getStrategyName() {
+		return "benevolent";
+	}
+
 
 }

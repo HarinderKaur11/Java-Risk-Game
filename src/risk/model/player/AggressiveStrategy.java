@@ -8,6 +8,7 @@ import java.util.Random;
 import risk.model.gamemode.GameDriver;
 import risk.model.map.CountryNode;
 import risk.model.turnmanager.TurnManager;
+import sun.security.krb5.internal.ccache.CCacheInputStream;
 
 /**
  * Class for Aggressive player that implements the PlayerStrategy interface.
@@ -19,12 +20,17 @@ public class AggressiveStrategy implements PlayerStrategy {
 	/**
 	 * GameDriver instance for benevolent player.
 	 */
-	private GameDriver driver = new GameDriver();
+	private GameDriver driver;
 	
 	/**
 	 * Object of TurnManager class.
 	 */
 	private TurnManager turnManager;
+	
+	public AggressiveStrategy(GameDriver nDriver) {
+		driver = nDriver;
+		turnManager = driver.getTurnManager();
+	}
 	
 	/**
 	 * Reinforcement phase of aggressive player that reinforces its strongest countries.
@@ -37,43 +43,10 @@ public class AggressiveStrategy implements PlayerStrategy {
 		for(String c: countryList){
 			countries.add(driver.getCountry(c));
 		}
-		
 		/*sort countries according to armies count in descending order.*/
 		countries = sortCountries(countries);
-		
 		CountryNode strongest = countries.get(0);
-		
-		/*get the list of strong countries.*/
-		int countOfStrongCountries = 1;
-		ArrayList<CountryNode> strongCountryList = new ArrayList<CountryNode>();
-		strongCountryList.add(countries.get(0));
-		for(int i= 1; i < countries.size(); i++){
-			if(countries.get(i).getArmiesCount() == countries.get(i-1).getArmiesCount()){
-				strongCountryList.add(countries.get(i));
-				countOfStrongCountries++;
-			}
-			else{
-				break;
-			}
-		}
-		
-		/*get the integer round-off of the armies to be alloted to each strong country.*/
-		int armiesToBeReinforced = (int)(driver.getCurrentPlayer().getArmiesCount()/countOfStrongCountries);
-		for( CountryNode country: strongCountryList){
-			country.addArmy(armiesToBeReinforced);
-			driver.getCurrentPlayer().removeArmies(armiesToBeReinforced);
-		}
-		
-		/*Move the armies remaining into the first strong country in the list.*/
-		int playerArmiesLeft = driver.getCurrentPlayer().getArmiesCount();
-				
-		if(!(playerArmiesLeft == 0)){
-			strongCountryList.get(0).addArmy(playerArmiesLeft);
-			driver.getCurrentPlayer().removeArmies(playerArmiesLeft);
-		}
-		
-		driver.changePhase();
-
+		driver.shiftArmiesOnReinforcement(strongest.getCountryName(), armies);
 	}
 
 	/**
@@ -92,74 +65,16 @@ public class AggressiveStrategy implements PlayerStrategy {
 		countries = sortCountries(countries);
 		CountryNode aCountry = countries.get(0);
 		
-		if(aCountry.getArmiesCount() > 1){
-			
-			/*calculate number of dice for attacker.*/
-			int aArmies = aCountry.getArmiesCount();
-			if(driver.getCurrentPlayer().getTurn() && aArmies>4) {
-				aArmies = 3;
-			}
-			else if(driver.getCurrentPlayer().getTurn()) {
-				aArmies -= 1;
-			}
-			else if(aArmies>2) {
-				aArmies = 2;
-			}
-			
-			/*randomly select a country to be attacked.*/
-			CountryNode dCountry = null;
-			Collections.shuffle(aCountry.getNeighbours());
-			for (CountryNode neighbour : aCountry.getNeighbours()) {
-				if (!neighbour.getOwner().getName().equals(driver.getCurrentPlayer().getName())) {
-					dCountry = neighbour;
-					break;
-				}
-			}
-			
-			/*calculate the number of dice for defender.*/
-			int dArmies = dCountry.getArmiesCount();
-			if(driver.getCurrentPlayer().getTurn() && dArmies>4) {
-				dArmies = 3;
-			}
-			else if(driver.getCurrentPlayer().getTurn()) {
-				dArmies -= 1;
-			}
-			else if(dArmies>2) {
-				dArmies = 2;
-			}
-			
-			/*find the attack result.*/
-			ArrayList<Integer> aResults = driver.diceRoll(aArmies);
-			ArrayList<Integer> dResults = driver.diceRoll(dArmies);
-			driver.battle(dCountry, dCountry.getOwner(), aCountry, aArmies, dArmies, aResults, dResults);
-			
-			/*check if defender country can be occupied.*/
-			if(dCountry.getArmiesCount()==0) {
-				dCountry.setOwner(driver.getCurrentPlayer());
-				turnManager.setWonCard(true);
-				
-				System.out.println("Country "+ dCountry.getCountryName() +" won by " + dCountry.getOwner().getName() + ", new armies "+dCountry.getArmiesCount());
-				
-				/*move countries from attacker country to newly acquired country.*/
-				int moveArmies = 1;
-				dCountry.addArmy(moveArmies);
-				aCountry.removeArmies(moveArmies);
-				if(driver.getMap().continentWonByPlayer(driver.getCurrentPlayer(), dCountry)) {
-					driver.getCurrentPlayer().addContinent(dCountry.getContinent());
-				}
-			}
-			driver.setPlayerOut(dCountry.getOwner());
-			if(!driver.checkGameState()) {
-				driver.continuePhase();
-			}
-			else {
-				driver.announceGameOver(driver.getPlayers().get(0).getName());
+		/*randomly select a country to be attacked.*/
+		CountryNode dCountry = null;
+		Collections.shuffle(aCountry.getNeighbours());
+		for (CountryNode neighbour : aCountry.getNeighbours()) {
+			if (!neighbour.getOwner().getName().equals(driver.getCurrentPlayer().getName())) {
+				dCountry = neighbour;
+				break;
 			}
 		}
-		else{
-			driver.changePhase();
-		}
-		
+		driver.announceAttack(aCountry.getCountryName(), dCountry.getCountryName());
 	}
 
 	/**
@@ -180,10 +95,19 @@ public class AggressiveStrategy implements PlayerStrategy {
 		CountryNode strongest = countries.get(0);
 		
 		/*fortify the strongest country.*/
-		CountryNode weakest = countries.get(countries.size()-1);
-		int average = (int)(weakest.getArmiesCount() + strongest.getArmiesCount()) / 2;
-		strongest.addArmy(average);
-		weakest.removeArmies(average);
+		for(CountryNode c: countries) {
+			if(!c.equals(strongest) && c.getArmiesCount()>1) {
+				int mArmies = c.getArmiesCount()-1;
+				driver.getArmiesShiftedAfterFortification(strongest.getCountryName(), c.getCountryName(), mArmies);
+				driver.nottifyObservers(driver.getTurnManager().getPhase());
+				break;
+			}
+		}
+		
+//		CountryNode weakest = countries.get(countries.size()-1);
+//		int average = (int)(weakest.getArmiesCount() + strongest.getArmiesCount()) / 2;
+//		strongest.addArmy(average);
+//		weakest.removeArmies(average);
 		driver.changePhase();
 	}
 
@@ -209,4 +133,20 @@ public class AggressiveStrategy implements PlayerStrategy {
 		});
 		return countryList;
 	}
+
+	
+	public int selectDiceNumber(int diceToRoll, String name) {
+		return diceToRoll; //Assuming player chooses maximum number of dice to roll
+	}
+
+	@Override
+	public int moveArmies(int aArmies, int maxArmies, String message) {
+		return new Random().nextInt(maxArmies+1-aArmies) + aArmies;
+	}
+	
+	@Override
+	public String getStrategyName() {
+		return "aggressive";
+	}
+
 }

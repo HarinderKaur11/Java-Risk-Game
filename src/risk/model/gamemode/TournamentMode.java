@@ -21,19 +21,14 @@ public class TournamentMode implements Mode{
 	private int moveLimit = 0;
 	
 	/**
-	 * List of players behaviors.
+	 * List of players and behaviors.
 	 */
-	private String[] behaviors;
+	private String[][] behaviors;
 	
 	/**
 	 * List of URLs of Maps 
 	 */
 	private String[] maps;
-	
-	/**
-	 * List of players names.
-	 */
-	private String[] playerInfo;
 	
 	/**
 	 * List of Winners
@@ -58,22 +53,25 @@ public class TournamentMode implements Mode{
 		this.mController = newController;
 	}
 
-	public TournamentMode(int gamesCount, String[] mapDetails, String[] playerBehaviorDetails, int movesCount) {
+	public TournamentMode(int gamesCount, String[] mapDetails, String[][] playerBehaviorDetails, int movesCount, MainController newController) {
+		mController = newController;
 		games = gamesCount;
 		maps = mapDetails;
 		behaviors = playerBehaviorDetails;
 		moveLimit = movesCount;
-		winners = new String[mapDetails.length][gamesCount];
+		winners = new String[mapDetails.length][gamesCount+1];
+		for(int i=0; i<maps.length; i++) {
+			winners[i][0] = maps[i];
+		}
 		currentMap = 0;
 		currentGame = 1;
 	}
 	
 	public void start() {
-		GameController gController = new GameController(maps[currentMap],behaviors,behaviors,moveLimit);
+		GameController gController = new GameController(maps[currentMap],behaviors,moveLimit);
 	}
 	
 	
-
 	public void updateResults(String winner) {
 		winners[currentMap][currentGame] = winner;
 		if(currentGame==games) {
@@ -83,12 +81,21 @@ public class TournamentMode implements Mode{
 				start();
 			}
 			else {
-				//Show results
+				mController.setResults(winners);
 			}
 		}
 		else {
 			currentGame++;
+			start();
 		}
 	}
 
+	public static void main(String[] arg) {
+		String[][] myPs = {{"Gur","aggressive"},{"Raj","aggressive"}};
+		String[] maps = {"D:\\Gurpreet\\Study\\Meng\\SEM6\\SOEN6441\\project\\World2005.map","D:\\Gurpreet\\Study\\Meng\\SEM6\\SOEN6441\\project\\World2005.bmp"};
+		TournamentMode s = new TournamentMode(2,maps, myPs, 10, MainController.getInstance());
+		MainController.getInstance().setMode(s);
+		s.start();
+	}
+	
 }

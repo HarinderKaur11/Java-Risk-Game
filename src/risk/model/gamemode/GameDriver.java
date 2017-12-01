@@ -1,13 +1,20 @@
 package risk.model.gamemode;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Observable;
 import java.util.Random;
 
 import risk.controller.GameController;
+import risk.controller.MainController;
 import risk.model.Card;
 import risk.model.RiskData;
-import risk.model.Stats;
 import risk.model.map.CountryNode;
 import risk.model.map.Map;
 import risk.model.map.MapNode;
@@ -105,17 +112,13 @@ public class GameDriver extends Observable {
 	
 	/**
 	 * Starts the game.
-	 * @param newPlayerData String array to store elements of player type.
-	 * @param behaviors Defines the behavior of the corresponding players.
+	 * @param newPlayerData String array to store elements of player name and type.
 	 */
-	public void runGame(String[] playerData, String[] behaviors) {
-		setChanged();
-		notifyObservers("Startup");
-		createPlayers(playerData, behaviors);
+	public void runGame(String[][] playerData) {
+		nottifyObservers("Startup phase: ");
+		createPlayers(playerData);
 		startUpPhase();
 		turnManager.startTurn(this.currentPlayer);
-		setChanged();
-		notifyObservers("Reinforcement");
 	}
 	
 	/**
@@ -123,14 +126,13 @@ public class GameDriver extends Observable {
 	 * @param playerData name of players
 	 * @param behaviors behavior of players
 	 */
-	public void createPlayers(String[] playerData, String[] behaviors) {
+	public void createPlayers(String[][] playerData) {
 		players = new ArrayList<Player>();
 		for(int i=0; i < playerData.length; i++){
-			Player temp = new Player(playerData[i],RiskData.InitialArmiesCount.getArmiesCount(playerData.length), this);
-			temp.setStrategy(createBehavior(behaviors[i]));
+			Player temp = new Player(playerData[i][0],RiskData.InitialArmiesCount.getArmiesCount(playerData.length), this);
+			temp.setStrategy(createBehavior(playerData[i][1]));
 			players.add(temp);
-			setChanged();
-			notifyObservers(temp.getName());
+			nottifyObservers("Player created and  added "+temp.getName());
 		}
 	}
 	
@@ -141,22 +143,20 @@ public class GameDriver extends Observable {
 	 */
 	private PlayerStrategy createBehavior(String strategy) {
 			PlayerStrategy pStrategy = null;
-			switch(strategy) {
-				case "human":
-					new HumanStrategy(this);
-					break;
-				case "benevolent":
-					new BenevolentStrategy();
-					break;
-				case "aggressive":
-					new AggressiveStrategy();
-					break;
-				case "cheater":
-					new CheaterStrategy();
-					break;
-				case "random":
-					new RandomStrategy();
-					break;
+			if(strategy.equals("human")){
+				pStrategy = new HumanStrategy(this);
+			}
+			else if(strategy.equals("benevolent")) {
+				pStrategy = new BenevolentStrategy(this);
+			}
+			else if(strategy.equals("aggressive")){
+				pStrategy = new AggressiveStrategy(this);
+			}
+			else if(strategy.equals("cheater")) {
+				pStrategy = new CheaterStrategy(this);
+			}
+			else if(strategy.equals("random")) {
+				pStrategy = new RandomStrategy(this);
 			}
 			return pStrategy;
 	}
@@ -166,18 +166,15 @@ public class GameDriver extends Observable {
 	 * @param playerData String array to store elements of player type.
 	 */
 	public void startUpPhase() {
-		
 		dividingCountries(map.getMapData());
-		
 		updatePlayerView();
-		
 		/*Distribute armies to countries as per player's choice.*/
 		int totalArmiesDiv = players.get(0).getArmiesCount();
 		for(int i1=0;i1<totalArmiesDiv ;i1++){
-			System.out.print("Armies divided"+players.get(0).getArmiesCount());
 			for(Player p: players){
 				String s = p.placeArmyOnStartUp();
 				p.getCountry(s).addArmy(1);
+				nottifyObservers(p.getName()+" placed 1 army on "+s);
 				p.removeArmies(1);
 			}
 		}
@@ -192,6 +189,7 @@ public class GameDriver extends Observable {
 	public void dividingCountries(ArrayList<MapNode> mapData) {
 		players.get(0).setTurnTrue();
 		this.currentPlayer = players.get(0);
+		nottifyObservers("Player "+players.get(0)+" has first turn");
 		int i = 0;
 		/*Random distribution of countries among the players.*/
 		for(MapNode m : mapData){
@@ -202,6 +200,7 @@ public class GameDriver extends Observable {
 				}
 			}
 		}
+		nottifyObservers("Countries divided to players");
 	}
 	
 	/**
@@ -231,14 +230,14 @@ public class GameDriver extends Observable {
 		int currentPlayerIndex = players.indexOf(getCurrentPlayer());
 		this.currentPlayer.setTurnFalse();
 		if (currentPlayerIndex == players.size()-1){
+			moveCounter();
 			this.currentPlayer = players.get(0);
 		}else{
 			this.currentPlayer = players.get(currentPlayerIndex+1);
 		}
 		this.currentPlayer.setTurnTrue();
+		nottifyObservers("Turn changed to "+ this.currentPlayer.getName());
 		this.getCurrentPlayer().setArmies(this.getCurrentPlayer().getArmies());
-		setChanged();
-		notifyObservers("Cards");
 	}
 	
 	/**
@@ -305,22 +304,16 @@ public class GameDriver extends Observable {
 	 * Delegate method to call method from TurnManager class to continue phases.
 	 */
 	public void continuePhase() {
-		moveCounter();
-		turnManager.continuePhase();
 		updateMap();
-		setChanged();
-		notifyObservers(turnManager.getPhase());
+		turnManager.continuePhase();
 	}
 
 	/**
 	 * Delegate method to call method from TurnManager class to change between phases.
 	 */
 	public void changePhase() {
-		moveCounter();
 		turnManager.changePhase();
 		updateMap();
-		setChanged();
-		notifyObservers(turnManager.getPhase());
 	}
 	
 	/**
@@ -364,9 +357,11 @@ public class GameDriver extends Observable {
 	 */
 	public void shiftArmiesOnReinforcement(String countrySelected, int armies) {
 		if(this.currentPlayer.shiftArmiesOnReinforcement(countrySelected, armies)==0) {
+			nottifyObservers(getTurnManager().getPhase());
 			changePhase();
 		}
 		else {
+			nottifyObservers(getTurnManager().getPhase());
 			continuePhase();
 		}
 	}
@@ -420,9 +415,7 @@ public class GameDriver extends Observable {
 	 * @param defenderCountry country defending against attack
 	 */
 	public void announceAttack(String attackerCountry, String defenderCountry) {
-		this.resultNotify = "Attack Attacker Country: "+attackerCountry+"  Defender Country: "+defenderCountry+"  ";
-		setChanged();
-		notifyObservers(resultNotify);
+		nottifyObservers("Attack announced Attacker Country: "+attackerCountry+"  Defender Country: "+defenderCountry);
 		/*Announce attack on phase view.*/
 		CountryNode dCountry = map.getCountry(defenderCountry);
 		Player defender = dCountry.getOwner();
@@ -435,33 +428,28 @@ public class GameDriver extends Observable {
 		ArrayList<Integer> dResults = diceRoll(dArmies);
 		String s = this.currentPlayer+" dice : ";
 		for(int i : aResults) {
-			s += i +" ";
+			s += i +", ";
 		}
-		s+= "<br>" + defender+" dice: ";
+		s+= defender+" dice: ";
 		for(int j : dResults) {
 			s += j +" ";
 		}
-		resultNotify += "<br>" + s;
-		System.out.println(resultNotify);
-		setChanged();
-		notifyObservers(resultNotify);
+		nottifyObservers(s);
 		battle(dCountry, defender, aCountry, aArmies, dArmies, aResults, dResults);
-		setChanged();
-		notifyObservers(resultNotify);
+		nottifyObservers("Armies left in attacker Country "+ aCountry.getCountryName()+" "+aCountry.getArmiesCount());
+		nottifyObservers("Armies left in defender Country "+ dCountry.getCountryName()+" "+dCountry.getArmiesCount());
 		/*check if defender country has armies left.*/
 		if(dCountry.getArmiesCount()==0) {
 			dCountry.setOwner(currentPlayer);
 			turnManager.setWonCard(true);
 			/*Notify change in ownership of a country.*/
-			resultNotify += "<br>" + " Country "+ dCountry.getCountryName() +" won by " + dCountry.getOwner().getName() + ", new armies "+dCountry.getArmiesCount();
-			setChanged();
-			notifyObservers(resultNotify);
-			System.out.println("Country "+ dCountry.getCountryName() +" won by " + dCountry.getOwner().getName() + ", new armies "+dCountry.getArmiesCount());
+			nottifyObservers("Country "+ dCountry.getCountryName() +" won by " + dCountry.getOwner().getName() + ", new armies "+dCountry.getArmiesCount());
 			/*move countries from attacker country to new acquired country.*/
-			int moveArmies = controller.setUpBoxInput(aArmies, aCountry.getArmiesCount()-1, "Select armies to move:");
+			int moveArmies = currentPlayer.moveArmies(aArmies, aCountry.getArmiesCount()-1, "Select armies to move:");
 			dCountry.addArmy(moveArmies);
 			aCountry.removeArmies(moveArmies);
 			if(map.continentWonByPlayer(currentPlayer, dCountry)) {
+				nottifyObservers("Player "+ currentPlayer.getName() +" conquered " + dCountry.getContinent());
 				currentPlayer.addContinent(dCountry.getContinent());
 			}
 		}
@@ -487,23 +475,23 @@ public class GameDriver extends Observable {
 	 */
 	public void battle(CountryNode dCountry, Player defender, CountryNode aCountry, int aArmies, int dArmies,ArrayList<Integer> aResults,ArrayList<Integer> dResults) {
 		/*Compare the results to decide battle result.*/
+		int i=1;
 		while(!aResults.isEmpty() && !dResults.isEmpty()) {
 			int aMax = max(aResults);
 			int dMax = max(dResults);
 			if(aResults.get(aMax)>dResults.get(dMax)) {
 				dCountry.removeArmy();
 				/*Show army removed from defender country.*/
-				resultNotify += "<br>" + " Winner Country: "+aCountry.getCountryName();
-				System.out.println("Army removed from defender country, new armies "+dCountry.getArmiesCount());
+				nottifyObservers("Battle "+i+" result : Winner Country: "+aCountry.getCountryName()+" Army removed from "+ dCountry.getCountryName());
 			}
 			else {
 				aCountry.removeArmy();
-				resultNotify += "<br>" + "Winner Country: "+dCountry.getCountryName();
-				/*Show army removed from attacker country*/
-				System.out.println("Army removed from attacker country, new armies "+aCountry.getArmiesCount());
+				nottifyObservers("Battle result : Winner Country: "+dCountry.getCountryName()+" Army removed from "+ aCountry.getCountryName());
+				
 			}
 			aResults.remove(aMax);
 			dResults.remove(dMax);
+			i++;
 		}
 	}
 	
@@ -532,7 +520,7 @@ public class GameDriver extends Observable {
 	/**
 	 * delegate method to call setUpBoxInput from controller class.
 	 * @param min minimum value user can select 
-	 * @param max maximum vlaue user can select
+	 * @param max maximum value user can select
 	 * @param message message explaining the purpose of input
 	 * @return a number selected by user
 	 */
@@ -555,7 +543,7 @@ public class GameDriver extends Observable {
 	}
 	
 	/**
-	 * This method return maxuimum value in a arraylist.
+	 * This method return maximum value in a arraylist.
 	 * @param array list from which max value to be searched
 	 * @return index of maximum value in list
 	 */
@@ -590,9 +578,10 @@ public class GameDriver extends Observable {
 	 * Call Phase View to show game over
 	 */
 	public void announceGameOver(String winner) {
-		notifyObservers("GameOver");
+		nottifyObservers("GameOver");
 		controller.removeAllControls();
-		Stats.notifyGameResult(winner);
+		System.out.print("Winner "+winner);
+		MainController.getInstance().notifyGameResult(winner);
 	}
 	
 	/**
@@ -627,14 +616,99 @@ public class GameDriver extends Observable {
 		controller.setFortificationControls(array);
 	}
 	
-	private void moveCounter() {
+	private boolean moveCounter() {
 		if(moveLimit!=0) {
 			if(moveCounter==moveLimit) {
+				turnManager.setGameOver(true);
 				announceGameOver("draw");
+				return false;
 			}
 			else {
 				moveCounter++;
 			}
+		}
+		return true;
+	}
+	
+	public TurnManager getTurnManager() {
+		return this.turnManager;
+	}
+	
+	public void nottifyObservers(String msg) {
+		setChanged();
+		notifyObservers(msg);
+	}
+	
+	
+	public void saveGameDataToFile() {   
+		
+	    try {
+	    	String timeStamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date());
+	    	File file = new File("SaveGame"+ timeStamp+".sav");
+	        FileOutputStream fileStream = new FileOutputStream(file);   
+	        ObjectOutputStream objectStream = new ObjectOutputStream(fileStream);   
+	        
+	        /*Map file path.*/
+	        objectStream.writeObject(SingleMode.getMapName());
+	        
+	        /*Number of players.*/
+	        objectStream.writeObject(players.size());
+	        
+	        /*Player data.*/
+	        for(Player player: this.players){
+		        objectStream.writeObject(player.getName());
+		        objectStream.writeObject(player.getPlayerStrategy());
+		        objectStream.writeObject(player.getCountries().size());
+		        for(CountryNode country: player.getCountries()){
+		        	objectStream.writeObject(country.getCountryName());
+		        	objectStream.writeObject(country.getArmiesCount());
+		        }
+	        }
+	        
+	        /*Current player.*/
+	        objectStream.writeObject(getCurrentPlayer().getName());
+	        
+	        /*Current phase.*/
+	        objectStream.writeObject(turnManager.getPhase()+"\n");
+	        
+	        objectStream.close();   
+	        fileStream.close(); 
+	        System.out.println("Game saved successfully");
+	    
+	    }catch(Exception e) {   
+	        System.out.println("Failed to save game state. "+e);   
+	    }   
+	}
+	
+	public static void loadGameDataFromFile(File file){ 
+
+		try{
+			FileInputStream saveFile = new FileInputStream(file);
+			ObjectInputStream save = new ObjectInputStream(saveFile);
+			
+			String filePath = (String) save.readObject();
+			int playerCount = (int) save.readObject();
+			
+			for(int i= 0; i< playerCount; i++){
+				Player player = (Player) save.readObject();
+				String playerStrategy = (String) save.readObject();
+				ArrayList<String> countries = new ArrayList<String>();
+				ArrayList<Integer> armies = new ArrayList<Integer>();
+				int countryCount = (int) save.readObject();
+				for(int j = 0; j < countryCount; j++){
+					countries.add((String) save.readObject());
+					armies.add((Integer) save.readObject());
+				}
+			}
+			
+			Player currentPlayer = (Player) save.readObject();
+			
+			String phaseName = (String) save.readObject();
+			
+			save.close();
+			
+		}catch(Exception exc){
+			System.out.println("Failed to load file");
 		}
 	}
 
