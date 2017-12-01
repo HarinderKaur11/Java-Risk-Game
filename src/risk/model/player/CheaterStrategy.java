@@ -18,6 +18,10 @@ public class CheaterStrategy implements PlayerStrategy {
 	 */
 	private GameDriver driver;
 	
+	/**
+	 * Constructor to initialize gamedriver.
+	 * @param nDriver GameDriver Instance.
+	 */
 	public CheaterStrategy(GameDriver nDriver) {
 		driver = nDriver;
 	}
@@ -41,16 +45,22 @@ public class CheaterStrategy implements PlayerStrategy {
 	@Override
 	public void attackPhase(ArrayList<String> countryList) {
 		for (String country : countryList) {
-			for (CountryNode neighbour : driver.getCountry(country).getNeighbours()) {
-				Player defender = neighbour.getOwner();
-				neighbour.setOwner(driver.getCurrentPlayer());
-				driver.nottifyObservers("Country "+neighbour.getCountryName()+" won by player "+driver.getCurrentPlayer());
-				driver.setPlayerOut(defender);
+			CountryNode aCountry = driver.getCountry(country);
+			for (CountryNode neighbour : (aCountry).getNeighbours()) {
+				if(neighbour.getOwner()!=driver.getCurrentPlayer()) {
+					if(neighbour.getOwner()==null) {
+						neighbour.setOwner(aCountry.getOwner());
+					}
+					else {
+						Player defender = neighbour.getOwner();
+						neighbour.setOwner(aCountry.getOwner());
+						driver.nottifyObservers("Country "+neighbour.getCountryName()+" won by player "+driver.getCurrentPlayer());
+						driver.setPlayerOut(defender);
+					}
+				}
 			}
 		}
-		if(driver.checkGameState()) {
-			driver.announceGameOver(driver.getCurrentPlayer().getName());
-		}
+		driver.announceGameOver(driver.getCurrentPlayer().getName());
 	}
 
 	/**
@@ -82,7 +92,9 @@ public class CheaterStrategy implements PlayerStrategy {
 		return diceToRoll;
 	}
 
-	@Override
+	/**
+	 * {@inheritDoc}
+	 */
 	public int moveArmies(int aArmies, int maxArmies, String message) {
 		return new Random().nextInt(maxArmies+1-aArmies) + aArmies;
 	}
@@ -94,7 +106,11 @@ public class CheaterStrategy implements PlayerStrategy {
 	public String getStrategyName() {
 		return "cheater";
 	}
-
+	
+	/**
+	 * Reinforcement phase implementation
+	 * @param countryList list of countries player owns
+	 */
 	public void reinforcement(String[] countryList) {
 		for (String country : countryList) {
 			driver.getCountry(country).addArmy(driver.getCountry(country).getArmiesCount());
@@ -102,6 +118,10 @@ public class CheaterStrategy implements PlayerStrategy {
 		driver.getCurrentPlayer().setArmies(0);
 	}
 	
+	/**
+	 * Fortification implementation
+	 * @param countryList list of countries that can be fortified
+	 */
 	public void fortify(ArrayList<String> countryList) {
 		for (String country : countryList) {
 			for (CountryNode neighbour : driver.getCountry(country).getNeighbours()) {

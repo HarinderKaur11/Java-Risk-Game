@@ -3,12 +3,12 @@ package risk.model.player;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Observable;
 import java.util.Random;
 
 import risk.model.gamemode.GameDriver;
 import risk.model.map.CountryNode;
 import risk.model.turnmanager.TurnManager;
-import sun.security.krb5.internal.ccache.CCacheInputStream;
 
 /**
  * Class for Aggressive player that implements the PlayerStrategy interface.
@@ -27,6 +27,10 @@ public class AggressiveStrategy implements PlayerStrategy {
 	 */
 	private TurnManager turnManager;
 	
+	/**
+	 * Constructor to initialize gamedriver and turn manager.
+	 * @param nDriver GameDriver Instance.
+	 */
 	public AggressiveStrategy(GameDriver nDriver) {
 		driver = nDriver;
 		turnManager = driver.getTurnManager();
@@ -39,7 +43,7 @@ public class AggressiveStrategy implements PlayerStrategy {
 	@Override
 	public void reinforcementPhase(int armies, String[] countryList) {
 		reinforcement(armies,countryList);
-		driver.notifyObservers("Armies moved according to Aggresive Strategy reinforcement");
+		driver.nottifyObservers("Armies moved according to Aggresive Strategy reinforcement");
 		driver.changePhase();
 		
 	}
@@ -69,6 +73,7 @@ public class AggressiveStrategy implements PlayerStrategy {
 				break;
 			}
 		}
+		driver.nottifyObservers("Attack: Attacker: "+ aCountry.getCountryName()+ "Defender: "+dCountry.getCountryName());
 		driver.announceAttack(aCountry.getCountryName(), dCountry.getCountryName());
 	}
 
@@ -78,16 +83,9 @@ public class AggressiveStrategy implements PlayerStrategy {
 	 */
 	@Override
 	public void fortificationPhase(ArrayList<String> countryList) {
-
 		fortify(countryList);
-		
-//		CountryNode weakest = countries.get(countries.size()-1);
-//		int average = (int)(weakest.getArmiesCount() + strongest.getArmiesCount()) / 2;
-//		strongest.addArmy(average);
-//		weakest.removeArmies(average);
-		driver.notifyObservers("Armies moved according to Aggresive Strategy fortification");
+		driver.nottifyObservers("Armies moved according to Aggresive Strategy fortification");
 		driver.changePhase();
-
 	}
 
 	/**
@@ -119,13 +117,19 @@ public class AggressiveStrategy implements PlayerStrategy {
 	public int selectDiceNumber(int diceToRoll, String name) {
 		return diceToRoll; //Assuming player chooses maximum number of dice to roll
 	}
-
-	@Override
+	
+	/**
+	 * {@inheritDoc}
+	 */
 	public int moveArmies(int aArmies, int maxArmies, String message) {
 		return new Random().nextInt(maxArmies+1-aArmies) + aArmies;
 	}
 	
-
+	/**
+	 * Reinforcement phase impleemntation
+	 * @param armies number of armies to be placed
+	 * @param countryList list of countries player owns
+	 */
 	public void reinforcement(int armies,String [] countryList) {
 		ArrayList<CountryNode> countries = new ArrayList<CountryNode>();
 		/*get country node for corresponding country name.*/
@@ -138,6 +142,10 @@ public class AggressiveStrategy implements PlayerStrategy {
 		driver.getCurrentPlayer().shiftArmiesOnReinforcement(strongest.getCountryName(), armies);
 	}
 	
+	/**
+	 * Fortification implementation
+	 * @param countryList list of countries that can be fortfied
+	 */
 	public void fortify(ArrayList<String> countryList) {
 		if(countryList.size()>1) {
 			ArrayList<CountryNode> countries = new ArrayList<CountryNode>();

@@ -12,12 +12,33 @@ import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.border.EmptyBorder;
 
+/**
+ * This class displays result of Tournament and Single Game mode
+ * @author Gurpreet
+ *
+ */
 public class ResultView extends JFrame{
 	
+	/**
+	 * Serial Version id for JFrame.
+	 * {@inheritDoc}
+	 */
+	private static final long serialVersionUID = 1257813257366300458L;
+
+	/**
+	 * JButton it start a new game again
+	 */
 	private JButton playAgain;
 	
+	/**
+	 * This button closes the game
+	 */
 	private JButton close;
 	
+	/**
+	 * Constructor for Result View
+	 * @param data data to be displayed on view
+	 */
 	public ResultView(Object[][] data) {
 		playAgain = new JButton("Play again");
 		close = new JButton("Close");
@@ -29,6 +50,10 @@ public class ResultView extends JFrame{
 		init(data);
 	}
 
+	/**
+	 * Display data using table form
+	 * @param data data to be dislayed on view
+	 */
 	private void init(Object[][] data) {
 		int columns = data[0].length;
 		String[] headings = new String[columns];
@@ -52,6 +77,10 @@ public class ResultView extends JFrame{
 		this.setVisible(true);
 	}
 	
+	/**
+	 * Add listener to playAgain button
+	 * @param e action listener to be added to play again button
+	 */
 	public void addListenerToPlayAgainButton(ActionListener e) {
 		this.playAgain.addActionListener(e);
 	}

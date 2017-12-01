@@ -31,8 +31,15 @@ public class RandomStrategy implements PlayerStrategy {
 	 */
 	private int countAttacks = 0;
 	
+	/**
+	 * Count the number of random attacks.
+	 */
 	private int randomAttacknumber = 0;
 	
+	/**
+	 * Constructor to initialize gamedriver and turn manager.
+	 * @param nDriver GameDriver Instance.
+	 */
 	public RandomStrategy(GameDriver nDriver) {
 		driver = nDriver;
 		turnManager = driver.getTurnManager();
@@ -61,7 +68,6 @@ public class RandomStrategy implements PlayerStrategy {
 			countAttacks++;
 			CountryNode aCountry = randomCountry;
 			
-			
 			/*randomly select a country to be attacked.*/
 			CountryNode dCountry = null;
 			Collections.shuffle(aCountry.getNeighbours());
@@ -71,6 +77,7 @@ public class RandomStrategy implements PlayerStrategy {
 					break;
 				}
 			}
+			driver.nottifyObservers("Attack: Attacker: "+ aCountry.getCountryName()+ "Defender: "+dCountry.getCountryName());
 			driver.announceAttack(aCountry.getCountryName(), dCountry.getCountryName());
 		}		
 		else{
@@ -94,32 +101,46 @@ public class RandomStrategy implements PlayerStrategy {
 	/**
 	 * Distribute armies in startup phase.
 	 */
-	@Override
 	public String placeArmy(String[] strings, String string) {
 		return strings[new Random().nextInt(strings.length)];
 	}
 
-	@Override
+	/**
+	 * {@inheritDoc}
+	 */
 	public int selectDiceNumber(int diceToRoll, String pName) {
 		return diceToRoll;
 	}
 
-	@Override
+	/**
+	 * {@inheritDoc}
+	 */
 	public int moveArmies(int aArmies, int maxArmies, String message) {
 		return new Random().nextInt(maxArmies+1-aArmies) + aArmies;
 	}
 
-	@Override
+	/**
+	 * {@inheritDoc}
+	 */
 	public String getStrategyName() {
 		return "random";
 	}
 	
+	/**
+	 * Reinforcement phase impleemntation
+	 * @param armies number of armies to be placed
+	 * @param countryList list of countries player owns
+	 */
 	public void reinforcement(int armies, String[] countryList) {
 		randomAttacknumber = new Random().nextInt(6);
 		String country = countryList[new Random().nextInt(countryList.length)];
 		driver.getCurrentPlayer().shiftArmiesOnReinforcement(country, armies);
 	}
 	
+	/**
+	 * Fortification implementation
+	 * @param countryList list of countries that can be fortfied
+	 */
 	public void fortify(ArrayList<String> countryList) {
 		ArrayList<CountryNode> countries = new ArrayList<CountryNode>() ;
 		for (String countryName : countryList) {

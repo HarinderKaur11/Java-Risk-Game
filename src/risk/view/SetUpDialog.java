@@ -51,6 +51,9 @@ public class SetUpDialog {
 	 */
 	private String mapRead = null;
 	
+	/**
+	 * This method display a dialog which ask user to select new game or load game using buttons
+	 */
 	public void loadSaveGameOption(){
 		JFrame frame1 = new JFrame();
 		frame1.setLayout(new BoxLayout(frame1.getContentPane(),BoxLayout.Y_AXIS));
@@ -60,7 +63,7 @@ public class SetUpDialog {
 		frame1.add(loadGame);
 		frame1.pack();
 		frame1.setVisible(true);
-		
+		/* New Game button actionlistener. */
 		newGame.addActionListener(new ActionListener(){
 
 			@Override
@@ -70,7 +73,7 @@ public class SetUpDialog {
 				
 			}
 		});
-		
+		/* Load Game button actionlistener. */
 		loadGame.addActionListener(new ActionListener(){
 
 			@Override
@@ -96,7 +99,6 @@ public class SetUpDialog {
 				}
 				MainController.getInstance().singleGameLoadInit(saveFileRead);	
 			}
-			
 		});
 	}
 	
@@ -263,6 +265,11 @@ public class SetUpDialog {
 		return "noMode";
 	}
 
+	/**
+	 * Get player behaviour.
+	 * @param playerInfo player data
+	 * @return behaviour of the players
+	 */
 	public String[] getPlayerBehavior(String[] playerInfo) {
 		String[] behaviors = new String[playerInfo.length];
 		for(int i=0;i<playerInfo.length;i++) {
