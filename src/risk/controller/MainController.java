@@ -4,7 +4,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 
-import risk.model.Stats;
 import risk.model.gamemode.Mode;
 import risk.model.gamemode.SingleMode;
 import risk.model.gamemode.TournamentMode;
@@ -13,6 +12,10 @@ import risk.view.SetUpDialog;
 import risk.view.TournamentInfo;
 import risk.view.mapeditor.MapFrame;
 
+
+/**
+ * Main controller for the game.
+ */
 public class MainController {
 	
 	/**
@@ -139,6 +142,7 @@ public class MainController {
 
 	/**
 	* string array of winners passed to initialize the winners
+	* @param winners winners
 	*/
 	public void setResults(String[][] winners) {
 		ResultView result = new ResultView(winners);
@@ -172,6 +176,9 @@ public class MainController {
 		return this.gameMode;
 	}
 
+	/**
+	 * Initialize play game on New Game button click.
+	 */
 	public void singleGameInit() {
 		String map = setupBox.getMapInfo("map");
 		String bmp = setupBox.getMapInfo("bmp");
@@ -184,6 +191,10 @@ public class MainController {
 		gameMode.start();
 	}
 
+	/**
+	 * Function for Loading a saved game state.
+	 * @param saveFileRead path of the saved game file.
+	 */
 	public void singleGameLoadInit(String saveFileRead) {
 		gameMode = new SingleMode();
 		((SingleMode) gameMode).loadGameDataFromFile(new File(saveFileRead));
