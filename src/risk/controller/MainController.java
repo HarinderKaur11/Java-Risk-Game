@@ -2,6 +2,7 @@ package risk.controller;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 
 import risk.model.Stats;
 import risk.model.gamemode.Mode;
@@ -145,6 +146,7 @@ public class MainController {
 	
 	/**
 	 * notify mode (TournamentMode/SingleMode) class about winner of game
+	 * @param winnerPlayer the name of the winner or draw.
 	 */
 	public void notifyGameResult(String winnerPlayer) {
 		if(gameMode!=null) {
@@ -156,7 +158,8 @@ public class MainController {
 	}
 	
 	/**
-	* initialize mode of the game
+	* initialize mode of the game.
+	* @param mode game mode to be set
 	*/
 	public void setMode(Mode mode) {
 		this.gameMode = mode;
@@ -181,9 +184,9 @@ public class MainController {
 		gameMode.start();
 	}
 
-	public void singleGameLoadInit() {
-		// TODO Auto-generated method stub
-		
+	public void singleGameLoadInit(String saveFileRead) {
+		gameMode = new SingleMode();
+		((SingleMode) gameMode).loadGameDataFromFile(new File(saveFileRead));
 	}
 	
 }
